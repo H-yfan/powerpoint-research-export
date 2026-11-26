@@ -1,0 +1,48 @@
+﻿验证日期：2026-11-26
+环境：本机 Windows 桌面 PowerPoint 16.0。
+
+已实际完成
+- 用户授权本机访问并开启 VBA 工程访问后，通过 PowerPoint COM 生成 PPAM，注入中文 Ribbon XML。
+- 完整 VBA 模块在临时 PPTM 中成功编译并执行测试入口，默认 DPI 返回 600。
+- PPAM 加载状态为 Loaded=-1，应用界面辅助功能树实际出现“科研高清导出”选项卡。
+- 已安装注册到 %APPDATA%\ResearchExport\ResearchExport.ppam（Registered=-1、Loaded=-1）。
+- 使用 55×50 mm 临时页面实际执行 Slide.Export，生成 1299×1181 PNG。
+- 在完整 VBA 的测试副本中仅跳过确认框、保存位置对话框和成功提示，保留实际导出/PNG处理/临时选区清理代码；实际执行当前页与选中形状白底导出，两者均得到 1299×1181。
+- 独立解析实际输出 PNG：所有 chunk CRC 正确，pHYs 仅一份，23622×23622 px/m（599.9988 DPI）。
+- 实测发现 Windows PowerShell 5.1 的 File.Replace 空字符串参数问题，已用 NullString.Value 修复并重跑两种导出（包括覆盖已有目标）成功。
+- 早期合成 PNG 测试还验证了 IDAT 像素样本未变、错误尺寸被拒绝且目标文件保留。
+
+尚未验证/限制
+- 保存对话框和按钮端到端点击交互未完成；VBA 导出测试用固定路径代替保存对话框。
+- 未重启 PowerPoint/Windows 验证加载项自动恢复；已完成持久注册。
+- 未测试各 Office 版本、复杂科研组图、特殊字体、OLE、全部 DPI 预设及所有取消/异常路径。
+- Shape.Export 实测尺寸有偏差（80×60 pt 单形状测试输出906×685），所以透明选区仍是实验功能；实际像素或 alpha 校验失败时不会保存。不能保证透明导出可用。
+- 未签名。
+
+安全
+没有修改系统 ExportBitmapResolution 或宏安全级别。VBA 工程访问由用户临时开启；构建已完成，现在可关闭。脚本仅使用进程级 PowerShell ExecutionPolicy Bypass，不修改持久执行策略。
+
+官方参考
+https://learn.microsoft.com/en-us/office/vba/api/powerpoint.slide.export
+https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shape.export
+https://learn.microsoft.com/en-us/office/vba/api/powerpoint.ppsaveasfiletype
+
+安装问题修复：
+用户反馈功能区不可见后，查得原注册指向 build 测试路径，Loaded=0、AutoLoad=0。Install-Addin.ps1 原按 Name='ResearchExport.ppam' 匹配旧项，但实际 Name='ResearchExport'，已改为按 FullName 的文件名匹配。已重新注册固定 AppData 路径，设置 AutoLoad=-1、Loaded=-1、Registered=-1，并核对注册表 AutoLoad=1。
+当前已有 PowerPoint 窗口的辅助功能树仍未出现新功能区，因此尚不能声称本次修复后已验证显示。需用户保存并退出全部 PowerPoint 窗口后重新打开验收，避免擅自关闭未保存文稿。
+自动加载属性官方说明：https://learn.microsoft.com/en-us/office/vba/api/powerpoint.addin.autoload
+
+
+v1.1 选区布局修复：
+用户反馈实际科研组合导出挤到左上角。简单两矩形组合在旧流程中未复现，原稿关闭后未对用户原组图完成复现，因此不能断言其唯一原因。
+已移除对粘贴后组合 Width/Height 和页面尺寸的修改。改为先设置原页面大小（至少容纳选区）的临时画布，粘贴后只移到原点，不缩放对象，按 DPI 渲染后以整数像素裁切。裁切会重编码 PNG，不进行插值。
+真实 PowerPoint VBA 回归：远离原点的嵌套组合，36×24 pt，小于一英寸；600 DPI 导出300×200，目视检查布局正确，像素(75,75)为红色，(225,150)为蓝色，(150,50)为白色。另重跑55×50 mm当前页与选区，输出1299×1181。
+已重新构建 PPAM 并更新固定安装位置。测试仍以跳过交互对话框的 VBA 测试副本执行。尚需用户用原科研组合复核；透明实验路径不在本次修复验证范围。
+
+
+v1.2 新增裁剪框输出：
+增加中文“插入裁剪框…”与“按裁剪框导出”按钮；原有按钮代码保持原行为。用户输入毫米尺寸，插入可移动框，导出完整幻灯片副本并去掉全部顶层标记框，再按指定偏移以整数像素裁切，不缩放原组图。
+本机PowerPoint 16.0 VBA实测：创建12.7×8.4666667mm框，移动到(50,60)pt，对嵌套/组合内容导出300×200像素；目视及五个位置样本验证区域、布局和边角颜色正确；另一个框位于输出区域内但未进入PNG，原稿形状数量和主框位置保持不变。
+55×50mm裁剪框以非零偏移导出1299×1181，pHYs23622，所有PNG chunk CRC通过独立校验。原有当前页和选区导出重跑均通过相同尺寸/元数据校验。
+已构建PPAM并安装，包内Ribbon含两个新回调。交互输入/保存对话框未做端到端点击测试，自动化测试只替换确认和保存选择对话框；框创建及裁剪主逻辑为实际VBA执行。
+未覆盖所有背景、主题、特殊字体或OLE；裁剪框外界、旋转和多选拒绝分支有检查代码，但未逐一实际触发。当前页与选区等旧功能会像普通形状一样包含原稿中的裁剪框，只有新裁剪导出会自动去框。
