@@ -5,7 +5,7 @@ Windows 桌面 Microsoft PowerPoint 加载项，中文功能区，安装一次�
 ## 功能
 
 - 当前幻灯片、选中对象或组合导出 PNG。
-- 300 / 600 / 900 / 1200 DPI，自定义 36–2400 DPI。
+- 解决目前PowerPoint无法导出高DPI图片的问题，实现300 / 600 / 900 / 1200 DPI，自定义 36–2400 DPI图片的导出。
 - 按实际物理尺寸计算像素，使用 `Slide.Export` 显式像素尺寸，不依赖 `ExportBitmapResolution` 注册表。
 - 写入 PNG pHYs 分辨率元数据，检查实际像素与 PNG CRC。
 - **定尺寸裁剪框**：输入毫米宽高，移动框后导出区域内全部可见内容，无须拆开组合。
